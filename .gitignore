@@ -1,0 +1,8 @@
+.env
+.venv
+*.pyc
+.ipynb_checkpoints
+gandhi_ai_vector_store
+resources
+db.sqlite3
+var
