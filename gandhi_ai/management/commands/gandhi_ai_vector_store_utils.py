@@ -120,5 +120,5 @@ def add_to_db(collection, page, section, docx_file):
         logger.info(metadatas)
         logger.info(ids)
         
-        # collection.add(
-        #     documents=sub_chunks, ids=ids, metadatas=metadatas, embeddings=embeddings['embeddings']['float'])
+        collection.add(
+            documents=sub_chunks, ids=ids, metadatas=metadatas, embeddings=embeddings['embeddings']['float'])
