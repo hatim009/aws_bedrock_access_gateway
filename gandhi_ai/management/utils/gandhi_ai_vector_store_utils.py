@@ -91,7 +91,7 @@ def read_word_file(file_path):
 def add_to_db(collection, page, section, docx_file):
 
     chunks = split_section(section)
-    max_chunk_size = 50
+    max_chunk_size = 25
 
     for i in range(0, int(len(chunks)/max_chunk_size) + 1):
         start_index = i*max_chunk_size

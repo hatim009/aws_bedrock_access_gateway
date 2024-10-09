@@ -2,12 +2,9 @@ import os
 import sys
 import chromadb
 
-
-from concurrent.futures import ProcessPoolExecutor, wait, as_completed
-
 from django.core.management.base import BaseCommand, CommandError
 
-from .gandhi_ai_vector_store_utils import add_to_db, read_word_file, split_file_content_into_sections, clean_the_split_sections
+from gandhi_ai.management.utils.gandhi_ai_vector_store_utils import add_to_db, read_word_file, split_file_content_into_sections, clean_the_split_sections
 
 
 class Command(BaseCommand):
