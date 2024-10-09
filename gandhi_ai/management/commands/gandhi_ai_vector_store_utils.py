@@ -1,12 +1,9 @@
 import re
 import docx
 import json
-import boto3
 import logging
-import chromadb
 
 from uuid import uuid4
-from decouple import config
 
 from django.conf import settings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -20,7 +17,13 @@ def get_embeddings(chunks):
         'embedding_types': ["float"]
     })
 
-    response = settings.BEDROCK_CLIENT.invoke_model(modelId=settings.COHERE_EMBED_ENGLISH_MODEL_ID, body=request_body)
+    response = settings.BEDROCK_CLIENT.invoke_model(
+        modelId=settings.COHERE_EMBED_ENGLISH_MODEL_ID, 
+        body=request_body,
+        accept = '*/*',
+        contentType='application/json'
+    )
+    print(response)
     return json.loads(response['body'].read().decode('utf-8'))
 
 def split_section(section):
@@ -89,27 +92,33 @@ def read_word_file(file_path):
 def add_to_db(collection, page, section, docx_file):
 
     chunks = split_section(section)
-    
-    embeddings = get_embeddings(chunks)
-    
-    doc_volume = re.findall(r'mahatma-gandhi-collected-works-volume-(\d+).docx', docx_file)[0]
-    metadatas = [
-        {
-            'source': 'https://www.gandhiashramsevagram.org/gandhi-literature/mahatma-gandhi-collected-works-volume-{0}.pdf'.format(doc_volume), 
-            'page': page
-        }
-        for i in range(len(chunks))
-    ]
+    max_chunk_size = 50
+    for i in range(0, int(len(chunks)/max_chunk_size) + 1):
+        start_index = i*max_chunk_size
+        end_index = min(len(chunks), start_index + max_chunk_size)
+        print(end_index - start_index)
 
-    ids = [
-        str(uuid4())
-        for i in range(len(chunks))
-    ]
+        sub_chunks = chunks[start_index: end_index]
 
-    logger.info(chunks)
-    logger.info(metadatas)
-    logger.info(ids)
-    
-    # collection.add(
-    #     documents=chunks, ids=ids, metadatas=metadatas, embeddings=embeddings['embeddings']['float'])
+        embeddings = get_embeddings(sub_chunks)
         
+        doc_volume = re.findall(r'mahatma-gandhi-collected-works-volume-(\d+).docx', docx_file)[0]
+        metadatas = [
+            {
+                'source': 'https://www.gandhiashramsevagram.org/gandhi-literature/mahatma-gandhi-collected-works-volume-{0}.pdf'.format(doc_volume), 
+                'page': page
+            }
+            for i in range(len(sub_chunks))
+        ]
+
+        ids = [
+            str(uuid4())
+            for i in range(len(sub_chunks))
+        ]
+
+        logger.info(sub_chunks)
+        logger.info(metadatas)
+        logger.info(ids)
+        
+        # collection.add(
+        #     documents=sub_chunks, ids=ids, metadatas=metadatas, embeddings=embeddings['embeddings']['float'])
