@@ -20,6 +20,7 @@ class Command(BaseCommand):
             collected_works_of_gandhi = os.listdir('./resources/collected_works_of_gandhi')
 
             for docx_file in collected_works_of_gandhi:
+                print(docx_file)
                 file_path = "./resources/collected_works_of_gandhi/{0}".format(docx_file)
                 content = read_word_file(file_path)
                 split_sections = split_file_content_into_sections(content)

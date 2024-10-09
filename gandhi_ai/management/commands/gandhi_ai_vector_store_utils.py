@@ -23,7 +23,6 @@ def get_embeddings(chunks):
         accept = '*/*',
         contentType='application/json'
     )
-    print(response)
     return json.loads(response['body'].read().decode('utf-8'))
 
 def split_section(section):
@@ -93,11 +92,10 @@ def add_to_db(collection, page, section, docx_file):
 
     chunks = split_section(section)
     max_chunk_size = 50
+
     for i in range(0, int(len(chunks)/max_chunk_size) + 1):
         start_index = i*max_chunk_size
-        end_index = min(len(chunks), start_index + max_chunk_size)
-        print(end_index - start_index)
-
+        end_index = min(len(chunks) + 1, start_index + max_chunk_size)
         sub_chunks = chunks[start_index: end_index]
 
         embeddings = get_embeddings(sub_chunks)
