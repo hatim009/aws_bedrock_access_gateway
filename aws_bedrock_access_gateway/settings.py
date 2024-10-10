@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 import os
 import boto3
+import chromadb
 
 from pathlib import Path
 from decouple import config
@@ -27,6 +28,8 @@ SECRET_KEY = 'django-insecure-fyc2(fx&b!fl4f0ci(8%gpp-+(^_*=q3n-^fl56756l&=&_*5s
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+
+SKIP_CWOG_CACHE_CREATION = True
 
 ALLOWED_HOSTS = []
 
@@ -85,6 +88,15 @@ DATABASES = {
     }
 }
 
+# Cache
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -127,15 +139,6 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-BEDROCK_CLIENT = boto3.client(
-    'bedrock-runtime', region_name='us-east-1', 
-    aws_access_key_id=config('AWS_ACCESS_KEY'), aws_secret_access_key=config('AWS_SECRET_ACCESS_KEY')
-)
-
-LLAMA_MODEL_ID = 'meta.llama3-8b-instruct-v1:0'
-
-COHERE_EMBED_ENGLISH_MODEL_ID = 'cohere.embed-english-v3'
-
 
 # LOGGING CONFIGURATION
 LOG_PATH = os.path.join(BASE_DIR, "var/log/aws_bedrock_access_gateway/")
@@ -160,3 +163,20 @@ LOGGING = {
         },
     },
 }
+
+
+BEDROCK_CLIENT = boto3.client(
+    'bedrock-runtime', region_name='us-east-1', 
+    aws_access_key_id=config('AWS_ACCESS_KEY'), aws_secret_access_key=config('AWS_SECRET_ACCESS_KEY')
+)
+
+LLAMA_MODEL_ID = 'meta.llama3-8b-instruct-v1:0'
+
+COHERE_EMBED_ENGLISH_MODEL_ID = 'cohere.embed-english-v3'
+
+
+CHROMA_DB_CLIENT = chromadb.PersistentClient(path="./gandhi_ai_vector_store")
+
+CWOG_COLLECTION_NAME = 'collected_works_of_gandhi'
+
+CWOG_COLLECTION = CHROMA_DB_CLIENT.get_collection(CWOG_COLLECTION_NAME)

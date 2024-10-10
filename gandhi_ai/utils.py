@@ -1,14 +1,24 @@
 import re
-import docx
 import json
-import logging
-
-from uuid import uuid4
+import docx
 
 from django.conf import settings
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-logger = logging.getLogger(__name__)
+
+def read_word_file(file_path):
+    # Load the document
+    doc = docx.Document(file_path)
+    
+    # Read all the text from the paragraphs
+    full_text = []
+    for para in doc.paragraphs:
+        full_text.append(para.text)
+    
+    # Join all paragraphs into one text
+    return '\n'.join(full_text)
+
 
 def get_embeddings(chunks):
     request_body = json.dumps({
@@ -25,13 +35,16 @@ def get_embeddings(chunks):
     )
     return json.loads(response['body'].read().decode('utf-8'))
 
+
 def split_section(section):
     text_splitter = RecursiveCharacterTextSplitter(separators = ["\n\n", "\n", ".", ","], chunk_size=1000, chunk_overlap=0)
     return text_splitter.split_text(section)
 
+
+
 def clean_the_split_sections(split_sections):
-    vol_footnote_pattern1 = r"\n*VOL\.\s*\d+\s*:\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s*\t*(\d+)\n*"
-    vol_footnote_pattern2 = r"\n*VOL\.\s*\d+\s*:\s*\d+\s*[A-Z]+,\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s*\t*(\d+)\n*"
+    vol_footnote_pattern1 = r"\n*VOL\.\s*\d+\s*:\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s*\.*\s*\t*(\d+)\n*"
+    vol_footnote_pattern2 = r"\n*VOL\.\s*\d+\s*:\s*\d+\s*[A-Z]+,\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s*\.*\s*\t*(\d+)\n*"
     work_footnote_pattern1 = r"\n*(\d+)\s*\t*THE COLLECTED WORKS OF MAHATMA GANDHI\n*"
     work_footnote_pattern2 = r"\n*(\d+)\s*\t*THE COLLECTED WORKS OF MAHATMA GANDNI\n*"
 
@@ -76,49 +89,3 @@ def split_file_content_into_sections(content):
         combined_sections.append(combined_section)
     
     return combined_sections
-
-
-def read_word_file(file_path):
-    # Load the document
-    doc = docx.Document(file_path)
-    
-    # Read all the text from the paragraphs
-    full_text = []
-    for para in doc.paragraphs:
-        full_text.append(para.text)
-    
-    # Join all paragraphs into one text
-    return '\n'.join(full_text)
-
-
-def add_to_db(collection, page, section, docx_file):
-
-    chunks = split_section(section)
-    max_chunk_size = 50
-
-    for i in range(0, int(len(chunks)/max_chunk_size) + 1):
-        start_index = i*max_chunk_size
-        end_index = min(len(chunks) + 1, start_index + max_chunk_size)
-        sub_chunks = [chunk for chunk in chunks[start_index: end_index] if re.findall(r"[a-zA-Z]", chunk)]
-
-        if not sub_chunks:
-            continue
-
-        embeddings = get_embeddings(sub_chunks)
-        
-        doc_volume = re.findall(r'mahatma-gandhi-collected-works-volume-(\d+).docx', docx_file)[0]
-        metadatas = [
-            {
-                'source': 'https://www.gandhiashramsevagram.org/gandhi-literature/mahatma-gandhi-collected-works-volume-{0}.pdf'.format(doc_volume), 
-                'page': page
-            }
-            for i in range(len(sub_chunks))
-        ]
-
-        ids = [
-            str(uuid4())
-            for i in range(len(sub_chunks))
-        ]
-        
-        collection.add(
-            documents=sub_chunks, ids=ids, metadatas=metadatas, embeddings=embeddings['embeddings']['float'])
