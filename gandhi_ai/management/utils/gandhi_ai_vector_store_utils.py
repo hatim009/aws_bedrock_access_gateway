@@ -30,22 +30,25 @@ def split_section(section):
     return text_splitter.split_text(section)
 
 def clean_the_split_sections(split_sections):
-    vol_footnote_pattern = r"\nVOL\.1:\s\d{4}\s-\s\d{2}\s[A-Z]+,\s\d{4}\s\t(\d+)\n*"
+    vol_footnote_pattern1 = r"\nVOL\.\s*\d+:\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s*\t(\d+)\n*"
+    vol_footnote_pattern2 = r"\nVOL\.\s*\d+:\s*\d+\s*[A-Z]+,\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s\t(\d+)\n*"
     work_footnote_pattern1 = r"\n(\d+)\s\tTHE COLLECTED WORKS OF MAHATMA GANDHI\n*"
     work_footnote_pattern2 = r"\n(\d+)\s\tTHE COLLECTED WORKS OF MAHATMA GANDNI\n*"
 
     cleaned_content_with_meta = []
 
     for i, section in enumerate(split_sections):
-        p1 = re.findall(vol_footnote_pattern, section) 
-        p2 = re.findall(work_footnote_pattern1, section)
-        p3 = re.findall(work_footnote_pattern2, section)
+        p1 = re.findall(vol_footnote_pattern1, section) 
+        p2 = re.findall(vol_footnote_pattern2, section) 
+        p3 = re.findall(work_footnote_pattern1, section)
+        p4 = re.findall(work_footnote_pattern2, section)
         
-        p = [int(n) for n in p1] + [int(n) for n in p2] + [int(n) for n in p3] + [1000000000]
+        p = [int(n) for n in p1] + [int(n) for n in p2] + [int(n) for n in p3] + [int(n) for n in p4] + [1000000000]
         
         min_page_number = min(p)
         
-        cleaned_section = re.sub(vol_footnote_pattern, "", section)
+        cleaned_section = re.sub(vol_footnote_pattern1, "", section)
+        cleaned_section = re.sub(vol_footnote_pattern2, "", cleaned_section)
         cleaned_section = re.sub(work_footnote_pattern1, "", cleaned_section)
         cleaned_section = re.sub(work_footnote_pattern2, "", cleaned_section)
         
@@ -91,12 +94,15 @@ def read_word_file(file_path):
 def add_to_db(collection, page, section, docx_file):
 
     chunks = split_section(section)
-    max_chunk_size = 25
+    max_chunk_size = 50
 
     for i in range(0, int(len(chunks)/max_chunk_size) + 1):
         start_index = i*max_chunk_size
         end_index = min(len(chunks) + 1, start_index + max_chunk_size)
-        sub_chunks = chunks[start_index: end_index]
+        sub_chunks = [chunk for chunk in chunks[start_index: end_index] if re.findall(r"[a-zA-Z]")]
+
+        if not sub_chunks:
+            continue
 
         embeddings = get_embeddings(sub_chunks)
         
@@ -113,10 +119,6 @@ def add_to_db(collection, page, section, docx_file):
             str(uuid4())
             for i in range(len(sub_chunks))
         ]
-
-        logger.info(sub_chunks)
-        logger.info(metadatas)
-        logger.info(ids)
         
         collection.add(
             documents=sub_chunks, ids=ids, metadatas=metadatas, embeddings=embeddings['embeddings']['float'])
