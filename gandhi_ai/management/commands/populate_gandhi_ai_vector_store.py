@@ -83,7 +83,7 @@ class Command(BaseCommand):
                     self.add_to_db(collection, cleaned_section[0], cleaned_section[1], docx_file) 
 
                 with open('./resources/embedded_cwog_files.txt', 'a') as fp:
-                    fp.write(docx_file)
+                    fp.write(docx_file + "\n")
         except RuntimeError:
             raise CommandError('Error populating embeddings for collected_works_of_gandhi DB.').with_traceback(sys.exception().__traceback__)
 
