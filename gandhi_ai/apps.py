@@ -1,3 +1,4 @@
+import re
 import os
 
 from django.apps import AppConfig
@@ -24,3 +25,11 @@ class GandhiAiConfig(AppConfig):
                 content = read_word_file(file_path)
                 split_sections = split_file_content_into_sections(content)
                 cleaned_sections_with_meta = clean_the_split_sections(split_sections)
+                
+                vol = re.findall(r'mahatma-gandhi-collected-works-volume-(\d+).docx', docx_file)[0]
+                for section, cleaned_section_with_meta in enumerate(cleaned_sections_with_meta):
+                    key = "vol:{vol}-section:{section}".format(vol=vol, section=section)
+                    value = cleaned_sections_with_meta[1]
+                    cache.set(key, value, timeout=None)
+
+                    

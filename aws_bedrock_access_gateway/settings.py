@@ -179,4 +179,4 @@ CHROMA_DB_CLIENT = chromadb.PersistentClient(path="./gandhi_ai_vector_store")
 
 CWOG_COLLECTION_NAME = 'collected_works_of_gandhi'
 
-# CWOG_COLLECTION = CHROMA_DB_CLIENT.get_collection(CWOG_COLLECTION_NAME)
+CWOG_COLLECTION = CHROMA_DB_CLIENT.get_collection(CWOG_COLLECTION_NAME)
