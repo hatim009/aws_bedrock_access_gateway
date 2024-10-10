@@ -3,7 +3,7 @@ import docx
 import json
 import logging
 
-from hashlib import sha256
+from uuid import uuid4
 
 from django.conf import settings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -116,8 +116,8 @@ def add_to_db(collection, page, section, docx_file):
         ]
 
         ids = [
-            sha256(chunk.encode('utf-8')).hexdigest()
-            for chunk in sub_chunks
+            str(uuid4())
+            for i in range(len(sub_chunks))
         ]
         
         collection.add(
