@@ -99,7 +99,7 @@ def add_to_db(collection, page, section, docx_file):
     for i in range(0, int(len(chunks)/max_chunk_size) + 1):
         start_index = i*max_chunk_size
         end_index = min(len(chunks) + 1, start_index + max_chunk_size)
-        sub_chunks = [chunk for chunk in chunks[start_index: end_index] if re.findall(r"[a-zA-Z]")]
+        sub_chunks = [chunk for chunk in chunks[start_index: end_index] if re.findall(r"[a-zA-Z]", chunk)]
 
         if not sub_chunks:
             continue
