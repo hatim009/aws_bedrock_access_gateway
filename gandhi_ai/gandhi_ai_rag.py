@@ -1,5 +1,9 @@
+import re
 import json
+
 from django.conf import settings
+from django.core.cache import cache
+
 
 def get_query_embeddings(query_text):
     request_body = json.dumps({
@@ -17,8 +21,27 @@ def get_query_embeddings(query_text):
     return json.loads(response['body'].read().decode('utf-8'))['embeddings']['float'] 
 
 
-def get_relevant_sections(relevant_document_chunks):
-    pass
+def get_relevant_sections_with_metadata(relevant_document_chunks):
+    metadatas = relevant_document_chunks['metadatas'][0]
+    documents = relevant_document_chunks['documents'][0]
+
+    sections = []
+    visited_keys = set()
+    for i in range(len(documents)):
+        source_pattern = r'https://www.gandhiashramsevagram.org/gandhi-literature/mahatma-gandhi-collected-works-volume-(\d+).pdf'
+        doc_vol = re.findall(source_pattern, metadatas[i]['source'])
+        doc_section = metadatas[i]['section']
+
+        cache_key = settings.CWOG_CACHE_KEY_FORMAT.format(vol=doc_vol, section=doc_section)
+
+        if cache_key not in visited_keys:
+            sections.add({
+                'section': cache.get(cache_key),
+                'metadata': metadatas[i]
+            })
+            visited_keys.add(cache_key)
+
+    return sections
 
 
 def get_gandhi_ai_rag_response(request):
@@ -28,7 +51,7 @@ def get_gandhi_ai_rag_response(request):
 
     relevant_document_chunks = settings.CWOG_COLLECTION.query(query_embeddings=query_embeddings, n_results=10)
 
-    relevant_sections = get_relevant_sections(relevant_document_chunks)
+    relevant_sections, metadata = get_relevant_sections_with_metadata(relevant_document_chunks)
 
     relevant_sections_combined = "\n\n\n".join(relevant_sections)
 

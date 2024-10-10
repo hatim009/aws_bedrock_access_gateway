@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
 
-    def add_to_db(self, collection, page, section, docx_file):
+    def add_to_db(self, collection, page, section, section_number, docx_file):
 
         chunks = split_section(section)
         max_chunk_size = 50
@@ -36,7 +36,8 @@ class Command(BaseCommand):
             metadatas = [
                 {
                     'source': 'https://www.gandhiashramsevagram.org/gandhi-literature/mahatma-gandhi-collected-works-volume-{0}.pdf'.format(doc_volume), 
-                    'page': page
+                    'page': page,
+                    'section': section_number
                 }
                 for i in range(len(sub_chunks))
             ]
@@ -79,8 +80,8 @@ class Command(BaseCommand):
                 content = read_word_file(file_path)
                 split_sections = split_file_content_into_sections(content)
                 cleaned_sections_with_meta = clean_the_split_sections(split_sections)
-                for cleaned_section in cleaned_sections_with_meta:
-                    self.add_to_db(collection, cleaned_section[0], cleaned_section[1], docx_file) 
+                for section_number, cleaned_section in enumerate(cleaned_sections_with_meta):
+                    self.add_to_db(collection, cleaned_section[0], cleaned_section[1], section_number, docx_file) 
 
                 with open('./resources/embedded_cwog_files.txt', 'a') as fp:
                     fp.write(docx_file + "\n")

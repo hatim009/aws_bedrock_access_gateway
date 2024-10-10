@@ -28,7 +28,7 @@ class GandhiAiConfig(AppConfig):
                 
                 vol = re.findall(r'mahatma-gandhi-collected-works-volume-(\d+).docx', docx_file)[0]
                 for section, cleaned_section_with_meta in enumerate(cleaned_sections_with_meta):
-                    key = "vol:{vol}-section:{section}".format(vol=vol, section=section)
+                    key = settings.CWOG_CACHE_KEY_FORMAT.format(vol=vol, section=section)
                     value = cleaned_sections_with_meta[1]
                     cache.set(key, value, timeout=None)
 
