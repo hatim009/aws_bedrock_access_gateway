@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
 
-    def add_to_db(collection, page, section, docx_file):
+    def add_to_db(self, collection, page, section, docx_file):
 
         chunks = split_section(section)
         max_chunk_size = 50
