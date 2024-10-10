@@ -3,7 +3,7 @@ import docx
 import json
 import logging
 
-from uuid import uuid4
+from hashlib import sha256
 
 from django.conf import settings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -30,10 +30,10 @@ def split_section(section):
     return text_splitter.split_text(section)
 
 def clean_the_split_sections(split_sections):
-    vol_footnote_pattern1 = r"\nVOL\.\s*\d+:\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s*\t(\d+)\n*"
-    vol_footnote_pattern2 = r"\nVOL\.\s*\d+:\s*\d+\s*[A-Z]+,\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s\t(\d+)\n*"
-    work_footnote_pattern1 = r"\n(\d+)\s\tTHE COLLECTED WORKS OF MAHATMA GANDHI\n*"
-    work_footnote_pattern2 = r"\n(\d+)\s\tTHE COLLECTED WORKS OF MAHATMA GANDNI\n*"
+    vol_footnote_pattern1 = r"\n*VOL\.\s*\d+\s*:\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s*\t*(\d+)\n*"
+    vol_footnote_pattern2 = r"\n*VOL\.\s*\d+\s*:\s*\d+\s*[A-Z]+,\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s*\t*(\d+)\n*"
+    work_footnote_pattern1 = r"\n*(\d+)\s*\t*THE COLLECTED WORKS OF MAHATMA GANDHI\n*"
+    work_footnote_pattern2 = r"\n*(\d+)\s*\t*THE COLLECTED WORKS OF MAHATMA GANDNI\n*"
 
     cleaned_content_with_meta = []
 
@@ -116,8 +116,8 @@ def add_to_db(collection, page, section, docx_file):
         ]
 
         ids = [
-            str(uuid4())
-            for i in range(len(sub_chunks))
+            sha256(chunk.encode('utf-8')).hexdigest()
+            for chunk in sub_chunks
         ]
         
         collection.add(

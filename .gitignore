@@ -2,6 +2,7 @@
 .venv
 *.pyc
 .ipynb_checkpoints
+.DS_Store
 gandhi_ai_vector_store
 resources
 db.sqlite3
