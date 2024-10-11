@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-fyc2(fx&b!fl4f0ci(8%gpp-+(^_*=q3n-^fl56756l&=&_*5s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-SKIP_CWOG_CACHE_CREATION = True
+SKIP_CWOG_CACHE_CREATION = False
 
 ALLOWED_HOSTS = []
 
@@ -94,6 +94,9 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'unique-snowflake',
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000000  # Adjust this as per your requirement
+        }
     }
 }
 

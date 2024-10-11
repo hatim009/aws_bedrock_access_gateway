@@ -54,11 +54,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             client = chromadb.PersistentClient(path="./gandhi_ai_vector_store")
-            try:
-                print("Delete collected_works_of_gandhi collection if exist.")
-                client.delete_collection('collected_works_of_gandhi')
-            except Exception as e:
-                print("Collection collected_works_of_gandhi does not exist, creating one.")
             
             collection = client.get_or_create_collection('collected_works_of_gandhi', metadata={"hnsw:space": "cosine"})
 
