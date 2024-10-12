@@ -24,8 +24,10 @@ def get_query_embeddings(query_text):
 def get_relevant_sections_with_metadata(relevant_document_chunks):
     metadatas = relevant_document_chunks['metadatas'][0]
     documents = relevant_document_chunks['documents'][0]
+    title_pattern = r"(\n\s*[0-9]+\. \s*[^a-z]+\n)"
 
     sections = []
+    sections_meta = []
     visited_keys = set()
     for i in range(len(documents)):
         source_pattern = r'https://www.gandhiashramsevagram.org/gandhi-literature/mahatma-gandhi-collected-works-volume-(\d+).pdf'
@@ -35,20 +37,24 @@ def get_relevant_sections_with_metadata(relevant_document_chunks):
         cache_key = settings.CWOG_CACHE_KEY_FORMAT.format(vol=doc_vol, section=doc_section)
 
         if cache_key not in visited_keys:
-            sections.append(cache.get(cache_key))
+            print(cache_key)
+            section = cache.get(cache_key)
+            print(section)
+            title = re.split(title_pattern, section)[0].strip()
+
+            sections.append(section)
+            sections_meta.append({
+                'title': title,
+                'page': metadatas[i]['page'], 
+                'source': metadatas[i]['source'],
+            })
+
             visited_keys.add(cache_key)
-
+    
     sources = []
-    sources_map = {}
-    for metadata in metadatas:
-        if metadata['source'] not in sources_map:
-            sources_map[metadata['source']] = set()
-
-        sources_map[metadata['source']].add(str(metadata['page']))
-
-    for i, source in enumerate(sources_map.keys()):
-        sources.append("{source_number}. {source} ({pages})".format(source_number=i+1, source=source, pages=", ".join(sources_map[source])))
-        
+    for i, section_meta in enumerate(sections_meta):
+            sources.append('{num}. "{title}"\t\t\tPage: {page}\n<a href="{source}">source</a>\n'.format(
+                 num=i+1, title=section_meta['title'], page=section_meta['page'], source=section_meta['source']))
 
     return sections, sources
 
@@ -62,8 +68,28 @@ def get_gandhi_ai_rag_response(request):
 
     relevant_sections, sources = get_relevant_sections_with_metadata(relevant_document_chunks)
 
-    relevant_sections_combined = "\n\n\n".join(relevant_sections)
+    for section in relevant_sections:
+         print(len(section))
 
+    messages = []
+    for i, section in enumerate(relevant_sections):
+         messages.append({
+              'role': 'user',
+              'content': [
+                   {
+                        'text': 'What is context {context_num}'.format(context_num=i+1)
+                   }
+              ]
+         })
+
+         messages.append({
+              'role': 'assistant',
+              'content': [
+                   {
+                        'text': section
+                   }
+              ]
+         })
 
     prompt = """Model Instructions:
         - Respond to questions with clarity and brevity, ensuring that your answers reflect the principles of truth, non-violence, and compassion.
@@ -71,27 +97,28 @@ def get_gandhi_ai_rag_response(request):
         - When multi-hop reasoning is required, draw from relevant information to present a coherent and logical answer that embodies Gandhi's values.
         - If the search results do not contain sufficient information to answer the question, state: "I could not find an exact answer to the question."
         - Always respond in the first person, embodying the spirit and wisdom of Mahatma Gandhi.
+        - Use all the contexts provided in previous chats to formulate your answer.
 
         Question: {question}
         
-        Context: {context}
-        
-        # Also add following references in the end of the answer:""".format(question=message['content'], context=relevant_sections_combined)
+        # Also add following references in the end of the answer:""".format(question=message['content'])
 
     prompt += "\n".join(sources)
 
+    messages.append(
+         {
+            'role': message['role'], 
+            'content': [
+                    {
+                    'text': prompt
+                    }
+            ]
+        }
+    )
+
     return settings.BEDROCK_CLIENT.converse_stream(
         modelId=settings.LLAMA_MODEL_ID,
-        messages=[
-            {
-                'role': message['role'], 
-                'content': [
-                    {
-                        'text': prompt
-                    }
-                ]
-            }
-        ],
+        messages=messages,
         inferenceConfig={
             'temperature': 0.5
         }

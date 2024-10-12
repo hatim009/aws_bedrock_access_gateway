@@ -74,9 +74,9 @@ class Command(BaseCommand):
                 file_path = "./resources/collected_works_of_gandhi/{0}".format(docx_file)
                 content = read_word_file(file_path)
                 split_sections = split_file_content_into_sections(content)
-                cleaned_sections_with_meta = clean_the_split_sections(split_sections)
-                for section_number, cleaned_section in enumerate(cleaned_sections_with_meta):
-                    self.add_to_db(collection, cleaned_section[0], cleaned_section[1], section_number, docx_file) 
+                pages, cleaned_sections = clean_the_split_sections(split_sections)
+                for section_number, cleaned_section in enumerate(cleaned_sections):
+                    self.add_to_db(collection, pages[section_number], cleaned_section, section_number, docx_file) 
 
                 with open('./resources/embedded_cwog_files.txt', 'a') as fp:
                     fp.write(docx_file + "\n")

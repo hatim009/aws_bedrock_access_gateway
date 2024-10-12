@@ -43,12 +43,13 @@ def split_section(section):
 
 
 def clean_the_split_sections(split_sections):
-    vol_footnote_pattern1 = r"\n*VOL\.\s*\d+\s*:\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s*\.*\s*\t*(\d+)\n*"
-    vol_footnote_pattern2 = r"\n*VOL\.\s*\d+\s*:\s*\d+\s*[A-Z]+,\s*\d{4}\s*-\s*\d+\s*[A-Z]+,\s*\d{4}\s*\.*\s*\t*(\d+)\n*"
+    vol_footnote_pattern1 = r"\n*VOL\.\s*\d+\s*:\s*\d{4}\s*-\s*\d+\s*[A-Z]+\s*,\s*\d{4}\s*\.*\s*\t*(\d+)\n*"
+    vol_footnote_pattern2 = r"\n*VOL\.\s*\d+\s*:\s*\d+\s*[A-Z]+\s*,\s*\d{4}\s*-\s*\d+\s*[A-Z]+\s*,\s*\d{4}\s*\.*\s*\t*(\d+)\n*"
     work_footnote_pattern1 = r"\n*(\d+)\s*\t*THE COLLECTED WORKS OF MAHATMA GANDHI\n*"
     work_footnote_pattern2 = r"\n*(\d+)\s*\t*THE COLLECTED WORKS OF MAHATMA GANDNI\n*"
 
-    cleaned_content_with_meta = []
+    pages = []
+    cleaned_sections = []
 
     for i, section in enumerate(split_sections):
         p1 = re.findall(vol_footnote_pattern1, section) 
@@ -65,17 +66,18 @@ def clean_the_split_sections(split_sections):
         cleaned_section = re.sub(work_footnote_pattern1, "", cleaned_section)
         cleaned_section = re.sub(work_footnote_pattern2, "", cleaned_section)
         
-        cleaned_content_with_meta.append([None, cleaned_section])
+        pages.append(None)
+        cleaned_sections.append(cleaned_section)
 
         if min_page_number == 1000000000:
             continue
         
         j = i
-        while j>=0 and cleaned_content_with_meta[j][0] == None:
-            cleaned_content_with_meta[j][0] = min_page_number
+        while j>=0 and pages[j] == None:
+            pages[j] = min_page_number
             j = j-1
 
-    return cleaned_content_with_meta
+    return pages, cleaned_sections
 
 
 def split_file_content_into_sections(content):    
