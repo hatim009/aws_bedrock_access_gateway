@@ -53,7 +53,7 @@ def get_relevant_sections_with_metadata(relevant_document_chunks):
     
     sources = []
     for i, section_meta in enumerate(sections_meta):
-            sources.append('{num}. "{title}"\t\t\tPage: {page}\n<a href="{source}">source</a>\n'.format(
+            sources.append('{num}. "{title}"\t\t\tPage: {page}\n{source}\n'.format(
                  num=i+1, title=section_meta['title'], page=section_meta['page'], source=section_meta['source']))
 
     return sections, sources
@@ -68,28 +68,47 @@ def get_gandhi_ai_rag_response(request):
 
     relevant_sections, sources = get_relevant_sections_with_metadata(relevant_document_chunks)
 
+
+    per_section_results = []
     for section in relevant_sections:
-         print(len(section))
 
-    messages = []
-    for i, section in enumerate(relevant_sections):
-         messages.append({
-              'role': 'user',
-              'content': [
-                   {
-                        'text': 'What is context {context_num}'.format(context_num=i+1)
-                   }
-              ]
-         })
+        prompt = """Model Instructions:
+            - Respond to questions with clarity and brevity, ensuring that your answers reflect the principles of truth, non-violence, and compassion.
+            - For yes/no questions, provide thoughtful insights and context that align with Gandhian philosophy.
+            - When multi-hop reasoning is required, draw from relevant information to present a coherent and logical answer that embodies Gandhi's values.
+            - If the search results do not contain sufficient information to answer the question, state: ""
+            - Always respond in the first person, embodying the spirit and wisdom of Mahatma Gandhi.
+            - This response along with many other response will be clubbed together as a context to this same question for final response, so answer accordingly.
 
-         messages.append({
-              'role': 'assistant',
-              'content': [
-                   {
-                        'text': section
-                   }
-              ]
-         })
+            Question: {question}
+            
+            Context: {context}""".format(question=message['content'], context=section)
+
+        prompt += "\n".join(sources)
+
+        response = settings.BEDROCK_CLIENT.converse(
+            modelId=settings.LLAMA_MODEL_ID,
+            messages=[{
+                'role': message['role'], 
+                'content': [
+                    {
+                        'text': prompt
+                    }
+                ]
+            }],
+            inferenceConfig={
+                'temperature': 0.5
+            }
+        )
+
+        per_section_results.append(
+             "\n".join([
+                  content['text']
+                  for content in response['output']['message']['content']
+             ])
+        )
+
+    print(per_section_results)
 
     prompt = """Model Instructions:
         - Respond to questions with clarity and brevity, ensuring that your answers reflect the principles of truth, non-violence, and compassion.
@@ -100,25 +119,23 @@ def get_gandhi_ai_rag_response(request):
         - Use all the contexts provided in previous chats to formulate your answer.
 
         Question: {question}
+
+        Context: {context}
         
-        # Also add following references in the end of the answer:""".format(question=message['content'])
+        # Also add following references in the end of the answer:""".format(question=message['content'], context="\n\n".join(per_section_results))
 
     prompt += "\n".join(sources)
 
-    messages.append(
-         {
-            'role': message['role'], 
-            'content': [
-                    {
-                    'text': prompt
-                    }
-            ]
-        }
-    )
-
     return settings.BEDROCK_CLIENT.converse_stream(
         modelId=settings.LLAMA_MODEL_ID,
-        messages=messages,
+        messages=[{
+            'role': message['role'], 
+            'content': [
+                {
+                    'text': prompt
+                }
+            ]
+        }],
         inferenceConfig={
             'temperature': 0.5
         }
