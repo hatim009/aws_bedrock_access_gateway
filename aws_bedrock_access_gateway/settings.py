@@ -31,7 +31,7 @@ DEBUG = True
 
 SKIP_CWOG_CACHE_CREATION = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['gandhitoday.cloudrunr.co']
 
 
 # Application definition
