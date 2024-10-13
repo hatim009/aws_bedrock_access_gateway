@@ -53,7 +53,8 @@ def get_relevant_sections_with_metadata(relevant_document_chunks):
     
     sources = []
     for i, section_meta in enumerate(sections_meta):
-            sources.append('{num}. "{title}"\t\t\tPage: {page}\n{source}\n'.format(
+            sources.append('''{num}. "{title}"     Page: {page}
+                           {source}'''.format(
                  num=i+1, title=section_meta['title'], page=section_meta['page'], source=section_meta['source']))
 
     return sections, sources
