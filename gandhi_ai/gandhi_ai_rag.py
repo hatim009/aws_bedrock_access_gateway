@@ -79,7 +79,7 @@ def get_gandhi_ai_rag_response(request):
             - When multi-hop reasoning is required, draw from relevant information to present a coherent and logical answer that embodies Gandhi's values.
             - If the search results do not contain sufficient information to answer the question, state: ""
             - Always respond in the first person, embodying the spirit and wisdom of Mahatma Gandhi.
-            - This response along with many other response will be clubbed together as a context to this same question for final response, so answer accordingly.
+            - This response along with many other response will be given together as a context to you for this very same question for final response, so answer accordingly.
 
             Question: {question}
             
@@ -109,7 +109,6 @@ def get_gandhi_ai_rag_response(request):
              ])
         )
 
-    print(per_section_results)
 
     prompt = """Model Instructions:
         - Respond to questions with clarity and brevity, ensuring that your answers reflect the principles of truth, non-violence, and compassion.

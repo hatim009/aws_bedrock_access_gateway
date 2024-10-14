@@ -37,7 +37,7 @@ def get_embeddings(chunks):
 
 
 def split_section(section):
-    text_splitter = RecursiveCharacterTextSplitter(separators = ["\n\n", "\n", ".", ","], chunk_size=1000, chunk_overlap=0)
+    text_splitter = RecursiveCharacterTextSplitter(separators = ["\n\n", "\n", ".", ","], chunk_size=1000, chunk_overlap=250)
     return text_splitter.split_text(section)
 
 
@@ -81,7 +81,7 @@ def clean_the_split_sections(split_sections):
 
 
 def split_file_content_into_sections(content):    
-    pattern = r"(\n\s*[0-9]+\. \s*[^a-z]+\n)"
+    pattern = r"(\n(\s*[0-9]+\. \s*[^a-z]+)|(\bCHAPTER [IVXLCDM]+\b)\n)"
     
     split_sections = re.split(pattern, content)
     
