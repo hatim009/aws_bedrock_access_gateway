@@ -80,14 +80,36 @@ def clean_the_split_sections(split_sections):
     return pages, cleaned_sections
 
 
-def split_file_content_into_sections(content):    
-    pattern = r"(?:\n\s*[0-9]+\. \s*[^a-z]+\n)|(?:\nCHAPTER [IVXLCDM]+\n)|(?:\nAPPENDIX [IVXLCDM]+\n)"
+# Define recursive function for splitting
+def recursive_split(text, patterns):
+    if not patterns:
+        return [text]  # Base case: If no patterns left, return the text as a single item.
     
-    split_sections = re.split(pattern, content)
+    pattern = patterns[0]  # Take the first pattern.
+    result = []
     
+    # Split text using the current pattern
+    split_text = re.split(pattern, text)
+    
+    # For each part, recursively apply the remaining patterns
+    for part in split_text:
+        if part:  # Skip empty strings
+            result.extend(recursive_split(part, patterns[1:]))  # Recurse on the remaining patterns.
+    
+    return result
+
+def split_file_content_into_sections(content):
+    patterns = [
+        r"(\n\s*[0-9]+\s*\.\s*[^a-z]+\s*\n)",
+        r"(\n\s*CHAPTER [IVXLCDM]+\s*\n)",
+        r"(\n\s*APPENDIX [IVXLCDM]+\s*\n)"
+    ]
+    
+    split_sections = recursive_split(content, patterns)
+
     combined_sections = []
-    for i in range(1, len(split_sections), 2):
-        combined_section = split_sections[i] + split_sections[i+1]
-        combined_sections.append(combined_section)
-    
+    for i in range(0, len(split_sections), 2):
+        combined = split_sections[i] + split_sections[i+1]
+        combined_sections.append(combined)
+
     return combined_sections
