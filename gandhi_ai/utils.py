@@ -43,8 +43,8 @@ def split_section(section):
 
 
 def clean_the_split_sections(split_sections):
-    vol_footnote_pattern1 = r"\n*VOL\.\s*\d+\s*:\s*\d{4}\s*-\s*\d+\s*[A-Z]+\s*,\s*\d{4}\s*\.*\s*\t*(\d+)\n*"
-    vol_footnote_pattern2 = r"\n*VOL\.\s*\d+\s*:\s*\d+\s*[A-Z]+\s*,\s*\d{4}\s*-\s*\d+\s*[A-Z]+\s*,\s*\d{4}\s*\.*\s*\t*(\d+)\n*"
+    vol_footnote_pattern1 = r"\n*VOL\.\s*\d+\s*:\s*\d{4}\s*-\s*\d+\s*[A-Z]+\s*,*\s*\d{4}\s*\.*\s*\t*(\d+)\n*"
+    vol_footnote_pattern2 = r"\n*VOL\.\s*\d+\s*:\s*\d+\s*[A-Z]+\s*,*\s*\d{4}\s*-\s*\d+\s*[A-Z]+\s*,*\s*\d{4}\s*\.*\s*\t*(\d+)\n*"
     work_footnote_pattern1 = r"\n*(\d+)\s*\t*THE COLLECTED WORKS OF MAHATMA GANDHI\n*"
     work_footnote_pattern2 = r"\n*(\d+)\s*\t*THE COLLECTED WORKS OF MAHATMA GANDNI\n*"
 
