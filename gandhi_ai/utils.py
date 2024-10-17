@@ -13,8 +13,11 @@ def read_word_file(file_path):
     
     # Read all the text from the paragraphs
     full_text = []
-    for para in doc.paragraphs:
-        full_text.append(para.text)
+    for counter, para in enumerate(doc.paragraphs):
+        if para.style.name.startswith('Heading') and not re.findall(r'[0-1]\s*.', para.text):
+            full_text.append(str(counter+1) + ". " + para.text)
+        else:
+            full_text.append(para.text)
     
     # Join all paragraphs into one text
     return '\n'.join(full_text)
