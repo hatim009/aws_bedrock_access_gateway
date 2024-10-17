@@ -100,6 +100,7 @@ def recursive_split(text, patterns):
 
 def split_file_content_into_sections(content):
     patterns = [
+        r"(\n1. SPEECH AT WORKING COMMITTEE MEETING, )",
         r"(\n\s*[0-9]+\s*\.\s*[^a-z]+\s*\n)",
         r"(\n\s*CHAPTER [IVXLCDM]+\s*\n)",
         r"(\n\s*APPENDIX [IVXLCDM]+\s*\n)"
@@ -110,6 +111,7 @@ def split_file_content_into_sections(content):
     combined_sections = []
     for i in range(0, len(split_sections), 2):
         combined = split_sections[i] + split_sections[i+1]
+
         combined_sections.append(combined)
 
     return combined_sections
