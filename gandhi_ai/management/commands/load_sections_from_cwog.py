@@ -32,7 +32,6 @@ class Command(BaseCommand):
                         key = settings.CWOG_CACHE_KEY_FORMAT.format(vol=vol, section=section)
                         value = cleaned_section
                         cache.set(key, value, timeout=None)
-                        print(cache.get(key))
         except RuntimeError:
             raise CommandError('Error populating redis cache with CWOG sections.').with_traceback(sys.exception().__traceback__)
 

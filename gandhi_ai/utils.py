@@ -15,7 +15,7 @@ def read_word_file(file_path):
     full_text = []
     for counter, para in enumerate(doc.paragraphs):
         if para.style.name.startswith('Heading') and not re.findall(r'[0-1]\s*.', para.text):
-            full_text.append(str(counter+1) + ". " + para.text)
+            full_text.append("\n" + str(counter+1) + ". " + para.text + "\n")
         else:
             full_text.append(para.text)
     

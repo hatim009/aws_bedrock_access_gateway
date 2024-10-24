@@ -37,9 +37,7 @@ def get_relevant_sections_with_metadata(relevant_document_chunks):
         cache_key = settings.CWOG_CACHE_KEY_FORMAT.format(vol=doc_vol, section=doc_section)
 
         if cache_key not in visited_keys:
-            print(cache_key)
             section = cache.get(cache_key)
-            print(section)
             title = re.split(title_pattern, section)[0].strip()
 
             sections.append(section)
