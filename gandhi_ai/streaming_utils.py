@@ -1,7 +1,10 @@
 import time
 import json
 import uuid
+import traceback
+from botocore.eventstream import EventStream
 from django.conf import settings
+
 
 from .gandhi_ai_rag import get_gandhi_ai_rag_response
 
@@ -130,7 +133,29 @@ def create_response_stream(model_id, message_id, chunk):
 
 def streamed_response(request):
 
-    response = get_gandhi_ai_rag_response(request)
+    try:
+        response = get_gandhi_ai_rag_response(request)
+    except Exception as e:
+        traceback.print_exc()
+        response = {
+            'stream': [
+                {'messageStart': {'role': 'assistant'}},
+                {'contentBlockDelta': {'delta': {'text': 'An '}, 'contentBlockIndex': 0}},
+                {'contentBlockDelta': {'delta': {'text': 'issue '}, 'contentBlockIndex': 1}},
+                {'contentBlockDelta': {'delta': {'text': 'occurred '}, 'contentBlockIndex': 2}},
+                {'contentBlockDelta': {'delta': {'text': 'while '}, 'contentBlockIndex': 3}},
+                {'contentBlockDelta': {'delta': {'text': 'generating '}, 'contentBlockIndex': 4}},
+                {'contentBlockDelta': {'delta': {'text': 'the '}, 'contentBlockIndex': 5}},
+                {'contentBlockDelta': {'delta': {'text': 'response, '}, 'contentBlockIndex': 6}},
+                {'contentBlockDelta': {'delta': {'text': 'Please '}, 'contentBlockIndex': 7}},
+                {'contentBlockDelta': {'delta': {'text': 'ask a '}, 'contentBlockIndex': 8}},
+                {'contentBlockDelta': {'delta': {'text': 'different '}, 'contentBlockIndex': 9}},
+                {'contentBlockDelta': {'delta': {'text': 'question.'}, 'contentBlockIndex': 10}},
+                {'contentBlockStop': {'contentBlockIndex': 11}},
+                {'messageStop': {'stopReason': 'end_turn'}},
+                {'metadata': {'usage': {'inputTokens': 100, 'outputTokens': 20, 'totalTokens': 120}, 'metrics': {'latencyMs': 0}}}
+            ]
+        }
 
     for chunk in response['stream']:
         stream_response = create_response_stream(request.data['model'], "chatcmpl-" + str(uuid.uuid4())[:8], chunk)

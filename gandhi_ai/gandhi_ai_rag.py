@@ -3,6 +3,9 @@ import json
 
 from django.conf import settings
 from django.core.cache import cache
+from concurrent.futures import ThreadPoolExecutor
+
+from .decorators import botocore_backoff
 
 
 def get_query_embeddings(query_text):
@@ -58,6 +61,23 @@ def get_relevant_sections_with_metadata(relevant_document_chunks):
     return sections, sources
 
 
+@botocore_backoff(retries=3)
+def bedrock_converse(messages):
+    return settings.BEDROCK_CLIENT.converse(
+        modelId=settings.LLAMA_MODEL_ID,
+        messages=messages,
+        inferenceConfig={
+            'temperature': 0.5
+        }
+    )
+
+def concurrent_bedrock_converse(sections, max_workers=1):
+    with ThreadPoolExecutor(max_workers = max_workers) as executor:
+         results = executor.map(bedrock_converse, sections)
+
+    return results
+
+
 def get_gandhi_ai_rag_response(request):
     message = request.data['messages'][-1]
 
@@ -67,8 +87,8 @@ def get_gandhi_ai_rag_response(request):
 
     relevant_sections, sources = get_relevant_sections_with_metadata(relevant_document_chunks)
 
-
-    per_section_results = []
+    request_sections = []
+    PER_SECTION_CHAR_LIMIT = 30000
     for section in relevant_sections:
 
         prompt = """Model Instructions:
@@ -81,31 +101,33 @@ def get_gandhi_ai_rag_response(request):
 
             Question: {question}
             
-            Context: {context}""".format(question=message['content'], context=section)
-
-        prompt += "\n".join(sources)
-
-        response = settings.BEDROCK_CLIENT.converse(
-            modelId=settings.LLAMA_MODEL_ID,
-            messages=[{
+            Context: {context}"""
+        
+        request_sub_sections = []
+        for i in range(0, len(section), PER_SECTION_CHAR_LIMIT):
+             sub_section = section[i:i+PER_SECTION_CHAR_LIMIT]
+             sub_section_prompt = prompt.format(question=message['content'], context=sub_section)
+             request_sub_sections.append([{
                 'role': message['role'], 
                 'content': [
                     {
-                        'text': prompt
+                        'text': sub_section_prompt
                     }
                 ]
-            }],
-            inferenceConfig={
-                'temperature': 0.5
-            }
-        )
+            }])
 
-        per_section_results.append(
-             "\n".join([
-                  content['text']
-                  for content in response['output']['message']['content']
-             ])
-        )
+        request_sections += request_sub_sections
+
+    per_section_responses = concurrent_bedrock_converse(request_sections)
+
+    full_context = "\n\n".join([
+         (
+            "\n".join([
+                content['text']
+                for content in response['output']['message']['content']
+            ])
+        ) for response in per_section_responses
+    ])
 
 
     prompt = """Model Instructions:
@@ -120,7 +142,7 @@ def get_gandhi_ai_rag_response(request):
 
         Context: {context}
         
-        # Also add following references in the end of the answer:""".format(question=message['content'], context="\n\n".join(per_section_results))
+        # Also add following references in the end of the answer:""".format(question=message['content'], context=full_context)
 
     prompt += "\n".join(sources)
 

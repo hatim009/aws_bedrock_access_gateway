@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def models(request):
     return Response([
         {
-            "name": "Gandhi AI", 
+            "name": "Gandhi Today", 
             "id": "gandhi-ai-v1:0"
         }
     ])
