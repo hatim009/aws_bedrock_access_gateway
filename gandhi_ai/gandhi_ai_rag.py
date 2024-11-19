@@ -1,5 +1,6 @@
 import re
 import json
+import requests
 
 from django.conf import settings
 from django.core.cache import cache
@@ -60,20 +61,40 @@ def get_relevant_sections_with_metadata(relevant_document_chunks):
 
     return sections, sources
 
+def llama_converse(messages):
+    converse_response = requests.post("http://localhost:11434/api/chat", data=json.dumps(messages))
+    
+    response = {
+        'stream': []
+    }
+    if converse_response.status_code == 200:
+        response['stream'].append({"messageStart": {"role": "assistant"}})
+        
+        for row in converse_response.content.decode('utf-8').split('\n'):
+            json_row = json.loads(row)
+            if json_row.get('done') != True:
+                response['stream'].append({
+                    "contentBlockDelta": {
+                        "delta": {
+                            "text": json_row["message"]["content"]}, 
+                            "contentBlockIndex": 0
+                        }
+                    })
+            else:
+                break
 
-@botocore_backoff(retries=3)
-def bedrock_converse(messages):
-    return settings.BEDROCK_CLIENT.converse(
-        modelId=settings.LLAMA_MODEL_ID,
-        messages=messages,
-        inferenceConfig={
-            'temperature': 0.5
-        }
-    )
+        response['stream'].append({"contentBlockStop": {"contentBlockIndex": 11}})
+        response['stream'].append({"messageStop": {"stopReason": "end_turn"}})
+        response['stream'].append({"metadata": {"usage": {"inputTokens": 0, "outputTokens": 0, "totalTokens": 0}, "metrics": {"latencyMs": 0}}})
 
-def concurrent_bedrock_converse(sections, max_workers=1):
+        return response
+    else:
+        raise RuntimeError(converse_response.text)
+
+
+def concurrent_llama_converse(sections, max_workers=8):
     with ThreadPoolExecutor(max_workers = max_workers) as executor:
-         results = executor.map(bedrock_converse, sections)
+         results = executor.map(llama_converse, sections)
 
     return results
 
@@ -105,30 +126,29 @@ def get_gandhi_ai_rag_response(request):
         
         request_sub_sections = []
         for i in range(0, len(section), PER_SECTION_CHAR_LIMIT):
-             sub_section = section[i:i+PER_SECTION_CHAR_LIMIT]
-             sub_section_prompt = prompt.format(question=message['content'], context=sub_section)
-             request_sub_sections.append([{
-                'role': message['role'], 
-                'content': [
-                    {
-                        'text': sub_section_prompt
-                    }
-                ]
-            }])
+            sub_section = section[i:i+PER_SECTION_CHAR_LIMIT]
+            sub_section_prompt = prompt.format(question=message['content'], context=sub_section)
+            request_sub_sections.append({
+                "model": "llama3.2", 
+                "messages":[{
+                    'role': message['role'], 
+                    'content': sub_section_prompt
+                }]
+            })
 
         request_sections += request_sub_sections
 
-    per_section_responses = concurrent_bedrock_converse(request_sections)
+    per_section_responses = concurrent_llama_converse(request_sections)
 
     full_context = "\n\n".join([
-         (
-            "\n".join([
-                content['text']
-                for content in response['output']['message']['content']
-            ])
-        ) for response in per_section_responses
+        "\n".join(
+            [
+                message['contentBlockDelta']['delta']['text']
+                for message in per_section_response['stream'] if 'contentBlockDelta' in message
+            ]
+        )
+        for per_section_response in per_section_responses
     ])
-
 
     prompt = """Model Instructions:
         - Respond to questions with clarity and brevity, ensuring that your answers reflect the principles of truth, non-violence, and compassion.
@@ -146,17 +166,10 @@ def get_gandhi_ai_rag_response(request):
 
     prompt += "\n".join(sources)
 
-    return settings.BEDROCK_CLIENT.converse_stream(
-        modelId=settings.LLAMA_MODEL_ID,
-        messages=[{
-            'role': message['role'], 
-            'content': [
-                {
-                    'text': prompt
-                }
-            ]
-        }],
-        inferenceConfig={
-            'temperature': 0.5
-        }
-    )
+    return llama_converse(messages={
+                "model": "llama3.2", 
+                "messages":[{
+                    'role': message['role'], 
+                    'content': prompt
+                }]
+            })
