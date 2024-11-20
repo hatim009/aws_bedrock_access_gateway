@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 import boto3
 import chromadb
+import google.generativeai as genai
 
 from pathlib import Path
 from decouple import config
@@ -188,3 +189,7 @@ CWOG_COLLECTION_NAME = 'collected_works_of_gandhi'
 CWOG_COLLECTION = CHROMA_DB_CLIENT.get_collection(CWOG_COLLECTION_NAME)
 
 CWOG_CACHE_KEY_FORMAT = "vol:{vol}-section:{section}"
+
+
+genai.configure(api_key=config("GOOGLE_GEMINI_API_KEY"))
+GENAI_MODEL = genai.GenerativeModel("gemini-1.5-flash")

@@ -28,7 +28,12 @@ def get_query_embeddings(query_text):
 def get_relevant_sections_with_metadata(relevant_document_chunks):
     metadatas = relevant_document_chunks['metadatas'][0]
     documents = relevant_document_chunks['documents'][0]
-    title_pattern = r"(\n\s*[0-9]+\. \s*[^a-z]+\n)"
+    title_patterns = [
+        r"(\n1. SPEECH AT WORKING COMMITTEE MEETING, )",
+        r"(\n\s*[0-9]+\s*\.\s*[^a-z]+\s*\n)",
+        r"(\n\s*CHAPTER\s*[IVXLCDM]+\s*\n)",
+        r"(\n\s*APPENDIX\s*[IVXLCDM]+\s*\n)"
+    ]
 
     sections = []
     sections_meta = []
@@ -42,7 +47,12 @@ def get_relevant_sections_with_metadata(relevant_document_chunks):
 
         if cache_key not in visited_keys:
             section = cache.get(cache_key)
-            title = re.split(title_pattern, section)[0].strip()
+            title = ""
+            for title_pattern in title_patterns:
+                split_titles = re.split(title_pattern, section)
+                if len(split_titles) > 1:
+                    title = split_titles[1].strip()
+                    break
 
             sections.append(section)
             sections_meta.append({
@@ -52,7 +62,7 @@ def get_relevant_sections_with_metadata(relevant_document_chunks):
             })
 
             visited_keys.add(cache_key)
-    
+
     sources = []
     for i, section_meta in enumerate(sections_meta):
             sources.append('''{num}. "{title}"     Page: {page}
@@ -61,40 +71,38 @@ def get_relevant_sections_with_metadata(relevant_document_chunks):
 
     return sections, sources
 
-def llama_converse(messages):
-    converse_response = requests.post("http://localhost:11434/api/chat", data=json.dumps(messages))
-    
+def gemini_converse(message, aggregate_response=False):
+    converse_response = settings.GENAI_MODEL.generate_content(message)
+
+    if aggregate_response == True:
+        return converse_response.text   
+
     response = {
         'stream': []
     }
-    if converse_response.status_code == 200:
-        response['stream'].append({"messageStart": {"role": "assistant"}})
-        
-        for row in converse_response.content.decode('utf-8').split('\n'):
-            json_row = json.loads(row)
-            if json_row.get('done') != True:
-                response['stream'].append({
-                    "contentBlockDelta": {
-                        "delta": {
-                            "text": json_row["message"]["content"]}, 
-                            "contentBlockIndex": 0
-                        }
-                    })
-            else:
-                break
 
-        response['stream'].append({"contentBlockStop": {"contentBlockIndex": 11}})
-        response['stream'].append({"messageStop": {"stopReason": "end_turn"}})
-        response['stream'].append({"metadata": {"usage": {"inputTokens": 0, "outputTokens": 0, "totalTokens": 0}, "metrics": {"latencyMs": 0}}})
+    response['stream'].append({"messageStart": {"role": "assistant"}})
+    
+    for i in range(0, len(converse_response.text), 3):
+        response['stream'].append({
+            "contentBlockDelta": {
+                "delta": {
+                    "text": converse_response.text[i:i+3]
+                }, 
+                "contentBlockIndex": 0
+            }
+        })
 
-        return response
-    else:
-        raise RuntimeError(converse_response.text)
+    response['stream'].append({"contentBlockStop": {"contentBlockIndex": 11}})
+    response['stream'].append({"messageStop": {"stopReason": "end_turn"}})
+    response['stream'].append({"metadata": {"usage": {"inputTokens": 0, "outputTokens": 0, "totalTokens": 0}, "metrics": {"latencyMs": 0}}})
+
+    return response
 
 
-def concurrent_llama_converse(sections, max_workers=8):
+def concurrent_gemini_converse(sections, aggregate_response=False, max_workers=4):
     with ThreadPoolExecutor(max_workers = max_workers) as executor:
-         results = executor.map(llama_converse, sections)
+         results = executor.map(gemini_converse, sections, [True for i in range(len(sections))])
 
     return results
 
@@ -128,25 +136,14 @@ def get_gandhi_ai_rag_response(request):
         for i in range(0, len(section), PER_SECTION_CHAR_LIMIT):
             sub_section = section[i:i+PER_SECTION_CHAR_LIMIT]
             sub_section_prompt = prompt.format(question=message['content'], context=sub_section)
-            request_sub_sections.append({
-                "model": "llama3.2", 
-                "messages":[{
-                    'role': message['role'], 
-                    'content': sub_section_prompt
-                }]
-            })
+            request_sub_sections.append(sub_section_prompt)
 
         request_sections += request_sub_sections
 
-    per_section_responses = concurrent_llama_converse(request_sections)
+    per_section_responses = concurrent_gemini_converse(request_sections, aggregate_response=True)
 
     full_context = "\n\n".join([
-        "\n".join(
-            [
-                message['contentBlockDelta']['delta']['text']
-                for message in per_section_response['stream'] if 'contentBlockDelta' in message
-            ]
-        )
+        per_section_response
         for per_section_response in per_section_responses
     ])
 
@@ -166,10 +163,4 @@ def get_gandhi_ai_rag_response(request):
 
     prompt += "\n".join(sources)
 
-    return llama_converse(messages={
-                "model": "llama3.2", 
-                "messages":[{
-                    'role': message['role'], 
-                    'content': prompt
-                }]
-            })
+    return gemini_converse(message=prompt)

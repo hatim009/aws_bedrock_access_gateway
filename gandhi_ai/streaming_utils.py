@@ -46,7 +46,8 @@ def create_response_stream(model_id, message_id, chunk):
     Ref: https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference.html#message-inference-examples
     """
     if settings.DEBUG:
-        print("Bedrock response chunk: " + str(chunk))
+        # print("Bedrock response chunk: " + str(chunk))
+        pass
     finish_reason = None
     message = None
     usage = None
@@ -162,7 +163,8 @@ def streamed_response(request):
         if not stream_response:
             continue
         if settings.DEBUG:
-            print("Proxy response :" + json.dumps(stream_response))
+            # print("Proxy response :" + json.dumps(stream_response))
+            pass
         if stream_response.get('choices'):
             yield stream_response_to_bytes(stream_response)
         elif request.data.get('stream_options') and request.data['stream_options'].get('include_usage'):
